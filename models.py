@@ -1,10 +1,12 @@
-from sqlalchemy import Column, Integer, String, Date, Time, ForeignKey, JSON
-from database import Base
-import sqlalchemy.types as types
-from sqlalchemy.schema import CheckConstraint
-from sqlalchemy.orm import validates, relationship
-from pydantic import BaseModel
 from typing import Union
+
+import sqlalchemy.types as types
+from pydantic import BaseModel
+from sqlalchemy import Column, Integer, String, Date, Time, ForeignKey, JSON
+from sqlalchemy.orm import validates, relationship
+
+from database import Base
+
 
 def char_len(str):
     return len(str)

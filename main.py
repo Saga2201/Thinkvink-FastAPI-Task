@@ -1,14 +1,16 @@
-from fastapi import FastAPI, Depends, HTTPException, status, Request
-import models 
-from schemas import User, UserProfile, ChangePassword, Assessment, UserAnswer
-from database import Base, engine, SessionLocal
-from sqlalchemy.orm import Session
+from datetime import datetime, timedelta
+
+from dateutil.parser import *
+from fastapi import FastAPI, Depends, HTTPException, status, Request, UploadFile, File
 from passlib.context import CryptContext
+from sqlalchemy.orm import Session
+
+import shutil
+import models
 from authentications import authenticate_user, create_access_token, get_current_user, get_password_hash
-from datetime import timedelta 
-from dateutil.parser import *  
-from datetime import datetime
+from database import Base, engine, SessionLocal
 from pagination import get_data
+from schemas import User, UserProfile, ChangePassword, Assessment, UserAnswer
 from utils import get_assessment_details, is_teacher_type_user
 
 Base.metadata.create_all(engine)
@@ -84,6 +86,16 @@ def userProfileUpdate(id: int, user_details:UserProfile, session: Session = Depe
         return {"Status": f"{user.username} is updated."}
     else:
         return {"Status": "Username or mail is already exist."}    
+
+@app.post("/profileImage/")
+def uploadProfileImage(token:str, file: UploadFile = File(...), session: Session = Depends(get_session)):
+    """
+    Function to upload profile image of user.
+    """
+    user = get_current_user(session, token)
+    with open(f"media/{user.username}.jpg", "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    return {"Status": "f{user.username} image uploaded."}             
 
 @app.delete("/userRemove/{id}")
 def userDelete(id: int, session: Session = Depends(get_session)):
@@ -198,6 +210,9 @@ def getDetailAssessment(id: int, token: str, session: Session = Depends(get_sess
 
 @app.post("/submitAssessment/{id:int}")
 def userAssessment(id: int, token: str, answer: UserAnswer, session: Session = Depends(get_session)):
+    """
+    Function will used to submit assessment for student type user.
+    """
     user = get_current_user(session, token)
     assessment_obj = session.query(models.Assessment).get(id)
     if not is_teacher_type_user(user):
@@ -232,6 +247,10 @@ def assessmentDelete(id: int, token:str, session: Session = Depends(get_session)
 
 @app.put("/updateAssessment/{id:int}")
 def assessmentUpdate(id: int, assessment:Assessment, token:str, session: Session = Depends(get_session)):
+    """
+    Function will updaye the assessment detail.
+    only teacher type of user allowed to perform this action.
+    """
     user = get_current_user(session, token)
     if is_teacher_type_user(user):
         assessment_obj = session.query(models.Assessment).get(id)
