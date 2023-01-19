@@ -1,8 +1,8 @@
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String, Date, Time, ForeignKey, JSON
 from database import Base
 import sqlalchemy.types as types
 from sqlalchemy.schema import CheckConstraint
-from sqlalchemy.orm import validates
+from sqlalchemy.orm import validates, relationship
 from pydantic import BaseModel
 from typing import Union
 
@@ -31,6 +31,8 @@ class User(Base):
     user_type = Column(UserType({"Student": "student", "Teacher": "teacher"}), nullable=False)
     password = Column('user_password', String(100), nullable=False)
     
+    assessment = relationship("Assessment", back_populates="creator")
+    student_answers = relationship("AnswerAssessment", back_populates="student")
 
     @validates('password')
     def validate_password(self, key, user_password) -> str:
@@ -40,3 +42,29 @@ class User(Base):
 
 class TokenData(BaseModel):
     username: Union[str, None] = None
+
+class Assessment(Base):
+    __tablename__ = "assessment"
+    id = Column(Integer, primary_key=True)
+    subject_name = Column(String(25))
+    date = Column(Date)
+    time = Column(Time)
+    questions = Column(JSON)
+
+    creator_id = Column(Integer, ForeignKey("users.id"))
+    creator = relationship("User", back_populates="assessment")
+
+    assessment_answer = relationship("AnswerAssessment", back_populates="user_assessment")
+
+class AnswerAssessment(Base):
+    __tablename__ = "student_answers"
+    id = Column(Integer, primary_key=True)
+    answers = Column(JSON)
+    student_id = Column(Integer, ForeignKey("users.id"))
+    user_assessment_id=Column(Integer, ForeignKey("assessment.id"))
+
+    # represent which user submitted assessment.
+    student = relationship("User", back_populates="student_answers")
+
+    # # represent asnwer belongs to which assessment.
+    user_assessment = relationship("Assessment", back_populates="assessment_answer")
